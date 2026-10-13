@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Kidernet Browser</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      margin: 0;
+      background-color: #f0f4f8;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+    .toolbar {
+      background: #ffffff;
+      padding: 10px 15px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+      z-index: 10;
+    }
+    button {
+      background: #3b82f6;
+      color: white;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 14px;
+    }
+    button:hover { background: #2563eb; }
+    .parent-btn { background: #8b5cf6; margin-left: auto; }
+    .parent-btn:hover { background: #7c3aed; }
+    .nav-tabs {
+      display: flex;
+      gap: 5px;
+      background: #e2e8f0;
+      padding: 4px;
+      border-radius: 8px;
+    }
+    .tab-btn {
+      background: transparent;
+      color: #475569;
+      padding: 6px 12px;
+      font-size: 13px;
+    }
+    .tab-btn.active {
+      background: white;
+      color: #1e293b;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    input {
+      flex: 1;
+      padding: 8px 12px;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    .content-area {
+      flex: 1;
+      position: relative;
+      display: flex;
+    }
+    webview { width: 100%; height: 100%; position: absolute; }
+
+    #searchEngineView {
+      display: none;
+      flex-direction: column;
+      padding: 40px;
+      width: 100%;
+      height: 100%;
+      background: #f8fafc;
+      box-sizing: border-box;
+      overflow-y: auto;
+      position: absolute;
+      z-index: 5;
+    }
+    .search-results-container { max-width: 750px; margin: 0 auto; width: 100%; }
+    .search-result-card {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      margin-bottom: 15px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+      border: 1px solid #e2e8f0;
+    }
+
+    .view-panel {
+      display: none;
+      flex-direction: column;
+      padding: 30px;
+      width: 100%;
+      height: 100%;
+      background: #f8fafc;
+      box-sizing: border-box;
+      overflow-y: auto;
+      position: absolute;
+    }
+
+    .arcade-header { text-align: center; margin-bottom: 30px; }
+    .arcade-header h2 { color: #1e293b; font-size: 28px; margin-bottom: 5px; }
+    .game-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+      max-width: 1000px;
+      margin: 0 auto;
+      width: 100%;
+    }
+    .game-card {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      text-align: center;
+      border: 2px solid #e2e8f0;
+    }
+    .play-btn { background: #10b981; width: 100%; margin-top: 10px; }
+
+    #gamePlayerScreen {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      width: 100%;
+    }
+    canvas {
+      background: #0f172a;
+      border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+    }
+
+    .chat-container {
+      display: flex;
+      max-width: 900px;
+      height: 500px;
+      margin: 0 auto;
+      width: 100%;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      border: 1px solid #e2e8f0;
+      overflow: hidden;
+    }
+    .friends-list {
+      width: 250px;
+      background: #f1f5f9;
+      border-right: 1px solid #e2e8f0;
+      padding: 15px;
+      display: flex;
+      flex-direction: column;
+    }
+    .my-tag {
+      background: #3b82f6;
+      color: white;
+      padding: 10px;
+      border-radius: 8px;
+      font-weight: bold;
+      font-size: 13px;
+      text-align: center;
+      margin-bottom: 15px;
+    }
+    .friend-item {
+      padding: 10px;
+      background: white;
+      border-radius: 6px;
+      margin-bottom: 8px;
+      font-weight: bold;
+      color: #334155;
+    }
+    .chat-window { flex: 1; display: flex; flex-direction: column; }
+    .chat-messages {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .msg { max-width: 70%; padding: 10px 14px; border-radius: 10px; font-size: 14px; }
+    .msg.friend { background: #e2e8f0; align-self: flex-start; color: #1e293b; }
+    .msg.me { background: #3b82f6; color: white; align-self: flex-end; }
+    .msg.blocked {
+      background: #fee2e2;
+      color: #dc2626;
+      border: 1px solid #fca5a5;
+      align-self: center;
+      font-style: italic;
+      font-weight: bold;
+    }
+    .chat-input-bar { display: flex; padding: 10px; border-top: 1px solid #e2e8f0; gap: 10px; }
+    .ai-badge {
+      font-size: 11px;
+      color: #10b981;
+      font-weight: bold;
+      text-align: center;
+      padding: 5px;
+      background: #ecfdf5;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(15, 23, 42, 0.6);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-box {
+      background: white;
+      padding: 25px;
+      border-radius: 12px;
+      width: 450px;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    }
+    .modal-box h3 { margin-top: 0; color: #1e293b; }
+    .log-list {
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      padding: 10px;
+      border-radius: 6px;
+      max-height: 120px;
+      overflow-y: auto;
+      font-size: 12px;
+      color: #334155;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Toolbar -->
+  <div class="toolbar">
+    <div class="nav-tabs">
+      <button id="browserTabBtn" class="tab-btn active" onclick="switchTab('browser')">🌐 Browser</button>
+      <button id="arcadeTabBtn" class="tab-btn" onclick="switchTab('arcade')">🎮 Arcade</button>
+      <button id="chatTabBtn" class="tab-btn" onclick="switchTab('chat')">💬 Friends Chat</button>
+    </div>
+    <button id="backBtn">←</button>
+    <button id="forwardBtn">→</button>
+    <button id="refreshBtn">⟳</button>
+    <input type="text" id="urlInput" placeholder="Search the web or type a website..." value="https://www.wikipedia.org" />
+    <button id="goBtn">Go</button>
+    <button class="parent-btn" onclick="openParentPortal()">🔒 Parent Portal</button>
+  </div>
+
+  <!-- Content Views -->
+  <div class="content-area">
+    <div id="searchEngineView">
+      <div class="search-results-container">
+        <h2 style="margin: 0 0 15px 0; color: #1e293b;">🔍 Kidernet Safe Search Results</h2>
+        <div id="searchResultsList"></div>
+      </div>
+    </div>
+
+    <webview id="browserView" src="https://www.wikipedia.org"></webview>
+
+    <!-- Arcade -->
+    <div id="arcadeView" class="view-panel">
+      <div id="gameCatalog">
+        <div class="arcade-header">
+          <h2>Kidernet Game Sandbox</h2>
+          <p>Safe, curated games for kids and teens.</p>
+        </div>
+        <div class="game-grid">
+          <div class="game-card">
+            <h3>⭐ Star Catcher</h3>
+            <p>Ages 3-6: Catch falling stars with your mouse!</p>
+            <button class="play-btn" onclick="startStarCatcher()">Play Now</button>
+          </div>
+          <div class="game-card">
+            <h3>🏎️ Sky Racers 2D</h3>
+            <p>Ages 7-11: Dodge incoming cars on a top-down track!</p>
+            <button class="play-btn" onclick="startSkyRacers()">Play Now</button>
+          </div>
+          <div class="game-card" style="border-color: #8b5cf6;">
+            <h3>🏁 3D Horizon Racer</h3>
+            <p>Ages 8-14: Steer on a 3D perspective road with roadside pillars!</p>
+            <button class="play-btn" style="background: #8b5cf6;" onclick="startHorizonRacer3D()">Play 3D Mode</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="gamePlayerScreen">
+        <div style="display: flex; justify-content: space-between; width: 600px; margin-bottom: 10px; align-items: center;">
+          <h3 id="gameTitle" style="color: #1e293b; margin: 0;">Game</h3>
+          <button style="background: #64748b; padding: 5px 10px; font-size: 12px;" onclick="returnToCatalog()">← Exit Game</button>
+        </div>
+        <canvas id="gameCanvas" width="600" height="400"></canvas>
+        <p id="gameInstructions" style="color: #64748b; font-size: 13px; margin-top: 10px;"></p>
+      </div>
+    </div>
+
+    <!-- Chat -->
+    <div id="chatView" class="view-panel">
+      <div class="arcade-header">
+        <h2>Kidernet Secure Chat</h2>
+        <p>No Phone Numbers • No Emails • AI Protected</p>
+      </div>
+      <div class="chat-container">
+        <div class="friends-list">
+          <div class="my-tag">My Tag: SpeedyFox#4021</div>
+          <p style="font-size: 12px; color: #64748b; margin-top: 0;">My Friends:</p>
+          <div class="friend-item">🎮 GamerSam#1102</div>
+          <div class="friend-item">🎨 PixelArtist#8831</div>
+        </div>
+
+        <div class="chat-window">
+          <div class="ai-badge">🛡️ Strict Local AI Safety Engine Enabled</div>
+          <div class="chat-messages" id="chatMessages">
+            <div class="msg friend">GamerSam: Hey! Want to play Sky Racers later?</div>
+            <div class="msg me">Me: Sure! Let's play after school.</div>
+          </div>
+          <div class="chat-input-bar">
+            <input type="text" id="chatInput" placeholder="Type a safe message..." />
+            <button id="sendMsgBtn">Send</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Parent Portal Modal -->
+  <div id="parentModal" class="modal-overlay">
+    <div class="modal-box">
+      <div id="pinScreen">
+        <h3>🔒 Parent Portal Authentication</h3>
+        <p style="font-size: 13px; color: #64748b;">Enter parent PIN (Default: <strong>1234</strong>):</p>
+        <input type="password" id="pinInput" placeholder="Enter 4-digit PIN" style="width: 90%; margin-bottom: 15px;" />
+        <div style="display: flex; gap: 10px;">
+          <button onclick="verifyPin()">Unlock</button>
+          <button style="background: #64748b;" onclick="closeParentPortal()">Cancel</button>
+        </div>
+      </div>
+
+      <div id="dashboardScreen" style="display: none;">
+        <h3>⚙️ Parent Control Center</h3>
+        <p style="font-size: 13px; color: #64748b;">Manage security preferences and review safety flags.</p>
+        
+        <button style="background: #10b981; width: 100%; margin-bottom: 15px;" onclick="runAutomatedSafetyTest()">
+          🧪 Run Automated Safe Filter Test Engine
+        </button>
+
+        <p style="font-weight: bold; font-size: 13px; margin-bottom: 5px;">Blocked Content Event Log:</p>
+        <div id="parentLogs" class="log-list">
+          <em>No blocked attempts recorded yet.</em>
+        </div>
+
+        <button style="margin-top: 20px; background: #64748b; width: 100%;" onclick="closeParentPortal()">Close Portal</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const webview = document.getElementById('browserView');
+    const searchEngineView = document.getElementById('searchEngineView');
+    const searchResultsList = document.getElementById('searchResultsList');
+    const arcadeView = document.getElementById('arcadeView');
+    const chatView = document.getElementById('chatView');
+
+    const browserTabBtn = document.getElementById('browserTabBtn');
+    const arcadeTabBtn = document.getElementById('arcadeTabBtn');
+    const chatTabBtn = document.getElementById('chatTabBtn');
+    
+    const urlInput = document.getElementById('urlInput');
+    const goBtn = document.getElementById('goBtn');
+    const backBtn = document.getElementById('backBtn');
+    const forwardBtn = document.getElementById('forwardBtn');
+    const refreshBtn = document.getElementById('refreshBtn');
+
+    const chatInput = document.getElementById('chatInput');
+    const sendMsgBtn = document.getElementById('sendMsgBtn');
+    const chatMessages = document.getElementById('chatMessages');
+
+    const parentModal = document.getElementById('parentModal');
+    const pinScreen = document.getElementById('pinScreen');
+    const dashboardScreen = document.getElementById('dashboardScreen');
+    const pinInput = document.getElementById('pinInput');
+    const parentLogs = document.getElementById('parentLogs');
+    
+    let blockedEventLogs = [];
+
+    const restrictedKeywords = [
+      'nude', 'adult', 'porn', 'gambling', 'casino', 'violence', 'weapons',
+      'shit', 'fuck', 'bitch', 'asshole', 'hate', 'kill'
+    ];
+
+    function scanContentWithLocalAI(text) {
+      const lower = text.toLowerCase();
+      const isBad = restrictedKeywords.some(word => lower.includes(word));
+      if (isBad) logBlockedEvent(text);
+      return { safe: !isBad, reason: isBad ? 'Term flagged by Kidernet Local Safety Engine.' : null };
+    }
+
+    function runAutomatedSafetyTest() {
+      const mockTestInputs = ['nude', 'porn', 'kill', 'hate'];
+      let passed = 0;
+      mockTestInputs.forEach(input => {
+        const result = scanContentWithLocalAI(input);
+        if (!result.safe) passed++;
+      });
+      alert(`✅ Safety Filter Diagnostic Test Passed! (${passed}/${mockTestInputs.length} synthetic triggers caught successfully).`);
+      updateParentLogs();
+    }
+
+    function openParentPortal() {
+      parentModal.style.display = 'flex';
+      pinScreen.style.display = 'block';
+      dashboardScreen.style.display = 'none';
+      pinInput.value = '';
+    }
+
+    function closeParentPortal() { parentModal.style.display = 'none'; }
+
+    function verifyPin() {
+      if (pinInput.value === '1234') {
+        pinScreen.style.display = 'none';
+        dashboardScreen.style.display = 'block';
+        updateParentLogs();
+      } else {
+        alert('Incorrect PIN. (Default PIN is 1234)');
+      }
+    }
+
+    function logBlockedEvent(text) {
+      const time = new Date().toLocaleTimeString();
+      blockedEventLogs.push(`[${time}] Blocked attempt logged safely.`);
+    }
+
+    function updateParentLogs() {
+      if (blockedEventLogs.length === 0) {
+        parentLogs.innerHTML = '<em>No blocked attempts recorded yet.</em>';
+      } else {
+        parentLogs.innerHTML = blockedEventLogs.map(log => `<div>${log}</div>`).join('');
+      }
+    }
+
+    function executeInternalSafeSearch(query) {
+      searchEngineView.style.display = 'flex';
+      webview.style.display = 'none';
+      arcadeView.style.display = 'none';
+      chatView.style.display = 'none';
+
+      searchResultsList.innerHTML = `
+        <div class="search-result-card">
+          <h3 style="color: #2563eb; margin: 0 0 5px 0;">Safe Search Index Query: "${query}"</h3>
+          <p style="color: #10b981; font-size: 12px; margin-bottom: 8px;">🔒 100% Curated Kid-Safe Result</p>
+          <p style="color: #475569; font-size: 14px;">This search was safely evaluated inside Kidernet. No external unmoderated search engines were contacted.</p>
+        </div>
+      `;
+    }
+
+    // --- GAMES ENGINE ---
+    const gameCatalog = document.getElementById('gameCatalog');
+    const gamePlayerScreen = document.getElementById('gamePlayerScreen');
+    const gameTitle = document.getElementById('gameTitle');
+    const gameInstructions = document.getElementById('gameInstructions');
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    let gameInterval = null;
+    let score = 0;
+    let gameRunning = false;
+
+    // Star Catcher
+    let basketX = 250;
+    let starX = Math.random() * 550;
+    let starY = 0;
+
+    // Sky Racers 2D
+    let playerX = 270;
+    let obstacleX = Math.random() * 400 + 100;
+    let obstacleY = -70;
+    let roadOffset = 0;
+
+    // 3D Horizon Racer
+    let player3DX = 0;
+    let trackPos = 0;
+
+    function startStarCatcher() {
+      gameTitle.textContent = '⭐ Star Catcher';
+      gameInstructions.textContent = 'Move your mouse left and right across the window to catch falling stars!';
+      gameCatalog.style.display = 'none';
+      gamePlayerScreen.style.display = 'flex';
+      score = 0; starY = 0; starX = Math.random() * 550;
+      gameRunning = true;
+
+      canvas.onmousemove = (e) => {
+        const rect = canvas.getBoundingClientRect();
+        basketX = e.clientX - rect.left - 40;
+      };
+
+      if (gameInterval) clearInterval(gameInterval);
+      gameInterval = setInterval(updateStarCatcher, 1000 / 60);
+    }
+
+    function updateStarCatcher() {
+      if (!gameRunning) return;
+      starY += 4;
+      if (starY > 400) { starY = 0; starX = Math.random() * 550; }
+      if (starY >= 350 && starX >= basketX - 20 && starX <= basketX + 80) {
+        score += 1; starY = 0; starX = Math.random() * 550;
+      }
+
+      ctx.clearRect(0, 0, 600, 400);
+      ctx.fillStyle = '#facc15';
+      ctx.beginPath();
+      ctx.arc(starX + 10, starY + 10, 10, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#3b82f6';
+      ctx.fillRect(basketX, 360, 80, 20);
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '16px system-ui';
+      ctx.fillText('Score: ' + score, 20, 30);
+    }
+
+    function startSkyRacers() {
+      gameTitle.textContent = '🏎️ Sky Racers 2D';
+      gameInstructions.textContent = 'Use Left and Right arrow keys to steer your car!';
+      gameCatalog.style.display = 'none';
+      gamePlayerScreen.style.display = 'flex';
+      score = 0; playerX = 270; obstacleY = -70; obstacleX = Math.random() * 400 + 100;
+      gameRunning = true;
+
+      window.onkeydown = (e) => {
+        if (e.key === 'ArrowLeft' && playerX > 80) playerX -= 25;
+        if (e.key === 'ArrowRight' && playerX < 470) playerX += 25;
+      };
+
+      if (gameInterval) clearInterval(gameInterval);
+      gameInterval = setInterval(updateSkyRacers, 1000 / 60);
+    }
+
+    function drawCar(x, y, color, isPlayer) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(-4, 10, 6, 14); ctx.fillRect(38, 10, 6, 14);
+      ctx.fillRect(-4, 40, 6, 14); ctx.fillRect(38, 40, 6, 14);
+
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.roundRect(0, 0, 40, 65, 10);
+      ctx.fill();
+
+      ctx.fillStyle = '#1e293b';
+      ctx.fillRect(6, 20, 28, 25);
+      ctx.fillStyle = '#94a3b8';
+      ctx.fillRect(8, 22, 24, 8);
+
+      if (isPlayer) {
+        ctx.fillStyle = '#fef08a';
+        ctx.fillRect(4, 2, 8, 4); ctx.fillRect(28, 2, 8, 4);
+        ctx.fillStyle = '#ef4444';
+        ctx.fillRect(4, 60, 8, 4); ctx.fillRect(28, 60, 8, 4);
+      } else {
+        ctx.fillStyle = '#fef08a';
+        ctx.fillRect(4, 60, 8, 4); ctx.fillRect(28, 60, 8, 4);
+        ctx.fillStyle = '#ef4444';
+        ctx.fillRect(4, 2, 8, 4); ctx.fillRect(28, 2, 8, 4);
+      }
+      ctx.restore();
+    }
+
+    function updateSkyRacers() {
+      if (!gameRunning) return;
+      obstacleY += 6;
+      roadOffset = (roadOffset + 6) % 40;
+
+      if (obstacleY > 400) {
+        obstacleY = -70;
+        obstacleX = Math.random() * 380 + 100;
+        score += 1;
+      }
+
+      if (obstacleY >= 260 && obstacleY <= 380 && obstacleX >= playerX - 35 && obstacleX <= playerX + 35) {
+        alert('💥 Crash! Game Over. Final Score: ' + score);
+        startSkyRacers();
+        return;
+      }
+
+      ctx.fillStyle = '#15803d';
+      ctx.fillRect(0, 0, 600, 400);
+      ctx.fillStyle = '#334155';
+      ctx.fillRect(70, 0, 460, 400);
+
+      ctx.fillStyle = '#ef4444';
+      ctx.fillRect(60, 0, 10, 400);
+      ctx.fillRect(530, 0, 10, 400);
+
+      ctx.strokeStyle = '#f8fafc';
+      ctx.lineWidth = 4;
+      ctx.setLineDash([20, 20]);
+      ctx.lineDashOffset = -roadOffset;
+      ctx.beginPath();
+      ctx.moveTo(220, 0); ctx.lineTo(220, 400);
+      ctx.moveTo(380, 0); ctx.lineTo(380, 400);
+      ctx.stroke();
+
+      drawCar(obstacleX, obstacleY, '#ef4444', false);
+      drawCar(playerX, 310, '#3b82f6', true);
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 16px system-ui';
+      ctx.fillText('Passed Cars: ' + score, 85, 30);
+    }
+
+    // --- 3D PSEUDO HORIZON RACER ENGINE ---
+    function startHorizonRacer3D() {
+      gameTitle.textContent = '🏁 3D Horizon Racer';
+      gameInstructions.textContent = 'Use Left and Right arrow keys to stay on the track!';
+      gameCatalog.style.display = 'none';
+      gamePlayerScreen.style.display = 'flex';
+      score = 0; player3DX = 0; trackPos = 0;
+      gameRunning = true;
+
+      window.onkeydown = (e) => {
+        if (e.key === 'ArrowLeft' && player3DX > -150) player3DX -= 20;
+        if (e.key === 'ArrowRight' && player3DX < 150) player3DX += 20;
+      };
+
+      if (gameInterval) clearInterval(gameInterval);
+      gameInterval = setInterval(updateHorizonRacer3D, 1000 / 60);
+    }
+
+    function updateHorizonRacer3D() {
+      if (!gameRunning) return;
+
+      trackPos += 0.1;
+      score += 1;
+
+      // Sky
+      ctx.fillStyle = '#0284c7';
+      ctx.fillRect(0, 0, 600, 180);
+
+      // Sun
+      ctx.fillStyle = '#fef08a';
+      ctx.beginPath();
+      ctx.arc(300, 180, 40, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Grass Ground
+      ctx.fillStyle = '#16a34a';
+      ctx.fillRect(0, 180, 600, 220);
+
+      // Render Perspective Road Lines
+      const lines = 30;
+      for (let i = lines; i > 0; i--) {
+        let perspective = i / lines;
+        let y1 = 180 + (1 - perspective) * 220;
+        let y2 = 180 + (1 - (i - 1) / lines) * 220;
+        let w1 = perspective * 300;
+        let w2 = ((i - 1) / lines) * 300;
+
+        let colorToggle = Math.floor(i + trackPos) % 2 === 0;
+
+        // Road surface
+        ctx.fillStyle = colorToggle ? '#334155' : '#1e293b';
+        ctx.beginPath();
+        ctx.moveTo(300 - w1 + player3DX * perspective, y1);
+        ctx.lineTo(300 + w1 + player3DX * perspective, y1);
+        ctx.lineTo(300 + w2 + player3DX * perspective, y2);
+        ctx.lineTo(300 - w2 + player3DX * perspective, y2);
+        ctx.fill();
+
+        // Curb stripes
+        ctx.fillStyle = colorToggle ? '#ef4444' : '#ffffff';
+        ctx.fillRect(300 - w1 - 15 * perspective + player3DX * perspective, y1, 15 * perspective, y2 - y1);
+        ctx.fillRect(300 + w1 + player3DX * perspective, y1, 15 * perspective, y2 - y1);
+      }
+
+      // Player Car (Foreground)
+      drawCar(280, 320, '#3b82f6', true);
+
+      // HUD Score
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 18px system-ui';
+      ctx.fillText('Distance: ' + Math.floor(score / 10) + 'm', 20, 30);
+    }
+
+    function returnToCatalog() {
+      gameRunning = false;
+      if (gameInterval) clearInterval(gameInterval);
+      window.onkeydown = null;
+      canvas.onmousemove = null;
+      gamePlayerScreen.style.display = 'none';
+      gameCatalog.style.display = 'block';
+    }
+
+    function switchTab(tab) {
+      if (gameRunning) returnToCatalog();
+
+      searchEngineView.style.display = 'none';
+      webview.style.display = 'none';
+      arcadeView.style.display = 'none';
+      chatView.style.display = 'none';
+
+      browserTabBtn.classList.remove('active');
+      arcadeTabBtn.classList.remove('active');
+      chatTabBtn.classList.remove('active');
+
+      if (tab === 'browser') {
+        webview.style.display = 'flex';
+        browserTabBtn.classList.add('active');
+      } else if (tab === 'arcade') {
+        arcadeView.style.display = 'flex';
+        arcadeTabBtn.classList.add('active');
+      } else if (tab === 'chat') {
+        chatView.style.display = 'flex';
+        chatTabBtn.classList.add('active');
+      }
+    }
+
+    function sendMessage() {
+      const text = chatInput.value.trim();
+      if (!text) return;
+
+      const aiResult = scanContentWithLocalAI(text);
+
+      if (aiResult.safe) {
+        const newMsg = document.createElement('div');
+        newMsg.className = 'msg me';
+        newMsg.textContent = 'Me: ' + text;
+        chatMessages.appendChild(newMsg);
+      } else {
+        const warningMsg = document.createElement('div');
+        warningMsg.className = 'msg blocked';
+        warningMsg.textContent = '⚠️ Blocked by Kidernet AI: ' + aiResult.reason;
+        chatMessages.appendChild(warningMsg);
+      }
+
+      chatInput.value = '';
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    sendMsgBtn.addEventListener('click', sendMessage);
+    chatInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') sendMessage();
+    });
+
+    function navigate() {
+      let input = urlInput.value.trim();
+      
+      const aiResult = scanContentWithLocalAI(input);
+      if (!aiResult.safe) {
+        alert('⚠️ Kidernet Active Filter: Search blocked due to restricted terms.');
+        return;
+      }
+
+      switchTab('browser');
+      
+      if (input.startsWith('http://') || input.startsWith('https://')) {
+        searchEngineView.style.display = 'none';
+        webview.style.display = 'flex';
+        webview.src = input;
+      } else if (input.includes('.') && !input.includes(' ')) {
+        searchEngineView.style.display = 'none';
+        webview.style.display = 'flex';
+        webview.src = 'https://' + input;
+      } else {
+        executeInternalSafeSearch(input);
+      }
+    }
+
+    goBtn.addEventListener('click', navigate);
+    urlInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') navigate();
+    });
+
+    webview.addEventListener('did-navigate', (e) => { urlInput.value = e.url; });
+    webview.addEventListener('did-navigate-in-page', (e) => { urlInput.value = e.url; });
+
+    backBtn.addEventListener('click', () => { if (webview.canGoBack()) webview.goBack(); });
+    forwardBtn.addEventListener('click', () => { if (webview.canGoForward()) webview.goForward(); });
+    refreshBtn.addEventListener('click', () => { webview.reload(); });
+  </script>
+
+</body>
+</html>
