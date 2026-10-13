@@ -1,0 +1,21 @@
+{
+  "name": "kidernet",
+  "version": "1.0.0",
+  "description": "App Store-ready kid-safe browser with active filtering, arcade, and parent portal",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "keywords": [
+    "electron",
+    "browser",
+    "kids",
+    "safe",
+    "parental-control"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^28.0.0"
+  }
+}
